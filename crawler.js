@@ -1,21 +1,11 @@
 const cheerio = require('cheerio');
 const axios = require('axios');
+const fs = require('fs');
 
-let urlList = [
-  'https://dev.pymnts.com',
-  'https://dev.pymnts.com/',
-  'https://dev.pymnts.com/data/?type=study',
-  'https://dev.pymnts.com/streaming/',
-  'https://dev.pymnts.com/today-on-pymnts/',
-  'https://dev.pymnts.com/topic/b2b/',
-  'https://dev.pymnts.com/topic/retail/',
-  'https://dev.pymnts.com/topic/fintech/',
-  'https://dev.pymnts.com/topic/connected-economy/',
-  'https://dev.pymnts.com/topic/crypto/',
-  'https://dev.pymnts.com/emea/',
-  'https://dev.pymnts.com/data/?type=tracker',
-  'https://dev.pymnts.com/topic/markets/'
-]
+let rawdata = fs.readFileSync('urlList.json');
+let urlList = JSON.parse(rawdata);
+console.log(urlList);
+
 
 const request = {
     url: 'https://dev.pymnts.com',
@@ -46,7 +36,16 @@ const triggerCache = async urls => {
         console.log(`Error getting ${request.url}`);
       }
   }
-  console.log(links);
+  console.log(`Found ${links.length} links`);
+
+  // convert URIs to URLs
+
+  // remove all links that do not belong to the HOSTNAME
+
+  // Remove duplicates
+
+  // get each link
+
 }
 
 triggerCache(urlList);
