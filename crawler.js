@@ -1,3 +1,7 @@
+const sleepMinutes = 1;
+const speedBumpSeconds = .5; // number seconds to wait in between fetching unique urls
+const minuteUpdateMinutes = 1;
+
 const cheerio = require('cheerio');
 const axios = require('axios');
 const fs = require('fs');
@@ -12,9 +16,8 @@ const minuteUpdates = JSON.parse(rawdata);
 const hostname = process.env.HOSTNAME;
 const hostname2 = process.env.HOSTNAME2;
 
-console.log(urlList);
-console.log(`Hostname: ${process.env.HOSTNAME}`);
-
+console.log('[crawler]', urlList);
+console.log(`[crawler] Hostname: ${process.env.HOSTNAME}`);
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -28,7 +31,7 @@ const updateMinuteUrls = async () => {
             method: 'get'
         }
         try {
-            console.log(`Minute update: ${request.url}`);
+            //console.log(`Minute update: ${request.url}`);
             response = await axios(request);        
             await sleep(1000);
 
@@ -40,13 +43,15 @@ const updateMinuteUrls = async () => {
 
 setInterval(() => {
    updateMinuteUrls();
-}, 3 * 60 * 1000);
+}, minuteUpdateMinutes * 62000);
 
 
 const triggerCache = async urls => {
   if (!urls) return;
   if (!Array.isArray(urls)) return;
   if (!urls.length) return;
+
+  console.log('[crawler] infinite loop');
 
   while (1) {
     // get links for all urls
@@ -60,6 +65,7 @@ const triggerCache = async urls => {
         }
         try {
           response = await axios(request);
+          //console.log(`Got: ${request.url}`);
           const $ = cheerio.load(response.data);
           const linkObjects = $('a');
           linkObjects.each((index, element) => {
@@ -69,7 +75,7 @@ const triggerCache = async urls => {
           console.error(`Error getting ${request.url}`);
         }
     }
-    console.log(`Found ${links.length} links`);
+    //console.log(`Found ${links.length} links`);
   
     // convert URIs to URLs
   
@@ -83,20 +89,19 @@ const triggerCache = async urls => {
       }
       else return link;
     });
-    console.log(`${mappedLinks.length} mapped links`);
+    //console.log(`${mappedLinks.length} mapped links`);
     
     // filter out any urls that do not point to the host
 
     let filteredLinks = mappedLinks.filter(link => {
       if (link.startsWith(hostname) || link.startsWith(hostname2)) return true;
-      console.log(link);
       return false;
     });
-    console.log(`${filteredLinks.length} filtered links`);
+    //console.log(`${filteredLinks.length} filtered links`);
     
     // find the unique links
     let uniqueLinks = [...new Set(filteredLinks)];
-    console.log(`${uniqueLinks.length} unique links`);
+    console.log(`[crawler] ${new Date().toLocaleTimeString()}: ${uniqueLinks.length} unique links`);
   
     // slowly request each unique link one by one
 
@@ -108,17 +113,20 @@ const triggerCache = async urls => {
       };
 
       try {
-        console.log(`fetching ${request.url}`);
+        //console.log(`[${i+1}/${uniqueLinks.length}] Fetching ${request.url}`);
         response = await axios(request);
-      } catch(e) {
-
+      } catch(err) {
+          console.error(`[crawler] ERROR ${err.code}: Cannot fetch ${request.url}`);
       }
-      await sleep(1500);
+      await sleep(speedBumpSeconds * 1000);
     }
+
+    // sleep five minutes before cycling again
+    console.log(`[crawler] Sleeping ${sleepMinutes} minutes`);
+    await sleep(sleepMinutes * 60000);
   }  
 
-  // sleep five minutes before cycling again
-  await sleep(300000);
+ 
 }
 
 triggerCache(urlList);
@@ -132,15 +140,12 @@ const testRestConnection = async () => {
  let response;
  
  try {
-      console.log(`fetching last 100 posts`, request);
       response = await axios(request);
-      console.log(` got last 100 posts`);
-      
  }    
  catch(err) {
-      console.log(`ERROR ${err.code}: Cannot fetch ${request.url}`);
+      console.error(`[crawler] ERROR ${err.code}: Cannot fetch ${request.url}`);
       return;
  }
 }
 
-testRestConnection();
+//testRestConnection();
