@@ -7,21 +7,6 @@ const axios = require('axios');
 const fs = require('fs');
 require('dotenv').config();
 
-const redisPackage = require('redis');
-const { request } = require('http');
-const { response } = require('express');
-const redis = redisPackage.createClient({password: process.env.PUBLISHER_PASSWORD});
-let redisConnected = false;
-
-redis.on('connect', async () => {
-  console.log('redis connected');
-  redisConnected = true;
-});
-redis.on('error', err => {
-  console.error('Redis Error', err);
-})
-redis.connect();
-
 let rawdata = fs.readFileSync('crawlList.json');
 const urlList = JSON.parse(rawdata);
 
@@ -47,12 +32,7 @@ const updateMinuteUrls = async () => {
         }
         try {
             //console.log(`Minute update: ${request.url}`);
-            response = await axios(request);     
-            try {
-              await redis.publish('url', 'test');
-            } catch (e) {
-              console.error(e.message);
-            }
+            response = await axios(request);        
             await sleep(1000);
 
         } catch(error) {
@@ -61,41 +41,38 @@ const updateMinuteUrls = async () => {
     }
 }
 
-// setInterval(() => {
-//    updateMinuteUrls();
-// }, minuteUpdateMinutes * 62000);
-
+setInterval(() => {
+   updateMinuteUrls();
+}, minuteUpdateMinutes * 62000);
 
 
 const triggerCache = async urls => {
   if (!urls) return;
   if (!Array.isArray(urls)) return;
   if (!urls.length) return;
-  let request;
 
   console.log('[crawler] infinite loop');
 
   while (1) {
     // get links for all urls
     let links = [];
-    let response;
 
     for (let i = 0; i < urls.length; ++i) {
-        request = {
+        let request = {
           url: urls[i],
           method: 'get',
           timeout: 15000
         }
         try {
           response = await axios(request);
-          console.log(`Got: ${request.url}`);
-          let $ = cheerio.load(response.data);
-          let linkObjects = $('a');
+          //console.log(`Got: ${request.url}`);
+          const $ = cheerio.load(response.data);
+          const linkObjects = $('a');
           linkObjects.each((index, element) => {
             links.push($(element).attr('href'));
           });
         } catch (error) {
-          console.error(`Error getting ${request.url}: ${error.message}`);
+          console.error(`Error getting ${request.url}`);
         }
     }
     //console.log(`Found ${links.length} links`);
@@ -127,7 +104,6 @@ const triggerCache = async urls => {
     console.log(`[crawler] ${new Date().toLocaleTimeString()}: ${uniqueLinks.length} unique links`);
   
     // slowly request each unique link one by one
-    let info = {};
 
     for (let i = 0; i < uniqueLinks.length; ++i) {
       request = {
@@ -135,11 +111,10 @@ const triggerCache = async urls => {
         method: 'get',
         timeout: 10000
       };
-    
+
       try {
-        console.log(`[${i+1}/${uniqueLinks.length}] Fetching ${request.url}`);
+        //console.log(`[${i+1}/${uniqueLinks.length}] Fetching ${request.url}`);
         response = await axios(request);
-        await redis.publish('url', `${request.url}||${response.data}`);
       } catch(err) {
           console.error(`[crawler] ERROR ${err.code}: Cannot fetch ${request.url}`);
       }
