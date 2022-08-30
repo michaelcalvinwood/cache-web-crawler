@@ -1,0 +1,29 @@
+// take slave out of rotation
+    Edit Node Condition
+    Gear -> Drain Connections
+    30 seconds later Gear->Disabled
+
+// install redis and run redisTest.php
+	yum -y update
+	yum -y install http://rpms.remirepo.net/enterprise/remi-release-7.rpm
+	yum --enablerepo=remi install redis
+	systemctl enable --now redis
+	redis-cli
+	http://{ip}/redisTest.php
+// install node, npm, pm2
+	curl -sL https://rpm.nodesource.com/setup_16.x | sudo bash - 
+	yum install -y nodejs
+	mkdir /home/redis
+	cd /home/redis
+	Local: add to and use ./updateAllSlaves.sh
+	npm install -g npm@8.17.0
+	npm i redis cheerio axios dotenv microstats
+	npm install pm2 -g
+	pm2 start index.js
+	pm2 logs --out
+	redis-cli
+	keys http*
+	exit
+	http:{ip}
+	http:{ip}/today-on-pymnts
+
